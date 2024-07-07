@@ -7,8 +7,8 @@ const userSchema = new mongoose.Schema({
 const exerciseSchema = new mongoose.Schema({
     description: { type: String, required: true },
     duration: { type: String, required: true },
-    date: { type: Date, required: true },
-    id: { type: String, required: true}
+    date: { type: Date },
+    id: { type: String}
 })
 
 const queries = {};
@@ -63,23 +63,21 @@ queries.findAllExerciseById = async (_id, from, to, limit) => {
             {
                 _id: 0, id: 0, __v: 0, 
             }
-        ).limit(limit);
-
-        const formattedLogs = logs.map(log => ({
-            ...log.toObject(),
-            date: log.date.toDateString()
-        }))
-
+        ).limit(limit ? limit : null);
         
         const results = {
             _id: user._id.toString(),
             username: user.username,
             count: logs.length,
-            log: formattedLogs 
+            log: logs.map(log => ({
+                ...log.toObject(),
+                date: log.date.toDateString(),
+                duration: Number(log.duration)
+            })) 
         }
         return logs ? results : null 
     } catch (err) {
-        console.error('error finding user: ', err)
+        console.log('error finding user: ', err)
         return { error: 'Internal Server Error' };
     }
     
@@ -124,7 +122,6 @@ queries.logExercise = async (_id, description, duration, date) => {
         });
 
         const data = await newExercise.save();
-        console.log(data)
         return [user, data];
     } catch (err) {
         console.error('Error logging exercise: ', err)
