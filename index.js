@@ -40,12 +40,12 @@ app.get('/api/users', async (req, res) => {
 app.post('/api/users/:_id/exercises', async (req, res) => {
   const { _id } = req.params;
   const { description, duration, date } = req.body;
+  let formattedDate = null;
 
   if (!_id || !description || !duration) {
     return res.status(400).json({ error: 'Missing required fields.' });
   }
   
-  let formattedDate = null;
   if(!date) {
     formattedDate = new Date();
   } else {
@@ -57,15 +57,14 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
   }
 
   try {
-    const loggedExercise = await queries.logExercise(_id, description, duration, date);
-
-    return res.json({ 
-      _id: loggedExercise[0]._id, 
-      username: loggedExercise[0].username,
-      date: loggedExercise[1].date.toDateString(),
-      duration: loggedExercise[1].duration,
-      description: loggedExercise[1].description
-    })
+    const user = await queries.logExercise(_id, description, duration, formattedDate);
+    return user ? res.json({ 
+      username: user[0].username,
+      description: user[1].description,
+      duration: parseInt(user[1].duration, 10),
+      date: user[1].date ? user[1].date.toDateString() : user[1].date,     
+      _id: user[0]._id
+    }) : null
 
   } catch (err) {
     return res.status(500).json({ error : 'Internal Server Error '});
@@ -96,13 +95,17 @@ app.get('/api/users/:_id/logs', async (req, res) => {
    limit = 0; // No limit if 'limit' is missing or invalid
  } 
 
-  const all = await queries.findAllExerciseById(_id, from, to, limit);
-  res.json({ 
-    _id: all._id, 
-    username: all.username, 
-    count: all.count,
-    log: all.log
-  });
+ try {
+    const user = await queries.findAllExerciseById(_id, from, to, limit);  
+    return res.json({ 
+      username: user.username, 
+      count: user.count,
+      _id: user._id, 
+      log: user.log
+    });
+ } catch (err) {
+  return err;
+ }
 });
 
 
